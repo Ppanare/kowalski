@@ -1,0 +1,148 @@
+#include "editfieldscdg.h"
+#include "ui_editfieldscdg.h"
+
+EditFieldsCdg::EditFieldsCdg(CodogramField *field, QWidget *parent) :
+    QDialog(parent),
+    cdgf(field),
+    ui(new Ui::EditFieldsCdg)
+{
+    ui->setupUi(this);
+    ui->spinBox_2->setValue(field->lenght);
+    if(field->oneDigitPerByte){
+        ui->radioButton_10->setChecked(true);
+        on_radioButton_10_clicked();
+    }
+    else{
+        ui->radioButton_9->setChecked(true);
+        on_radioButton_9_clicked();
+    }
+    if(field->isVariable)
+        ui->checkBox->setChecked(true);
+    else
+        ui->checkBox->setChecked(false);
+    ui->lineEdit->setText(field->name);
+    ui->lineEdit_2->setText(field->data);
+}
+
+EditFieldsCdg::~EditFieldsCdg()
+{
+    delete ui;
+}
+
+void EditFieldsCdg::on_myOkButton_clicked(){
+    if (ui->lineEdit->text() == ""){
+        QMessageBox::critical(this, "Ошибка", "Некорректное имя поля/слова данных/ОС");
+        return;
+    }
+    if(ui->radioButton_9->isChecked()){
+        if(ui->lineEdit_2->text().length() != ui->spinBox_2->value() * 2 + ui->spinBox_2->value() - 1){
+            QMessageBox::critical(this, "Ошибка", "Некорректно введено поле данных");
+            return;
+        }
+        if (!checker(ui->lineEdit_2->text())){
+            QMessageBox::critical(this, "Ошибка", "Некорректно введено поле данных.\nВвод данных разрешен только в шестнадцатиричном формате.");
+            return;
+        }
+    }
+    if(ui->radioButton_10->isChecked()){
+        if(ui->lineEdit_2->text().length() != ui->spinBox_2->value()*2-1){
+            QMessageBox::critical(this, "Ошибка", "Некорректно введено поле данных");
+            return;
+        }
+        if (!checker(ui->lineEdit_2->text())){
+            QMessageBox::critical(this, "Ошибка", "Некорректно введено поле данных.\nВвод данных разрешен только в шестнадцатиричном формате.");
+            return;
+        }
+    }
+    cdgf->data = ui->lineEdit_2->text().toUpper();
+    //cdgf->data = ui->lineEdit_2->text().remove('-');//удаление "-", пока не уверен что нужно
+    cdgf->name = ui->lineEdit->text();
+    cdgf->isVariable = ui->checkBox->isChecked();
+    cdgf->lenght = ui->spinBox_2->value();
+    cdgf->oneDigitPerByte = ui->radioButton_10->isChecked();
+    QDialog::accept();
+}
+
+void EditFieldsCdg::on_radioButton_10_clicked()
+{
+    on_spinBox_2_editingFinished();
+}
+
+void EditFieldsCdg::on_radioButton_9_clicked()
+{
+    on_spinBox_2_editingFinished();
+}
+
+//void EditFieldsCdg::on_spinBox_2_editingFinished()
+//{
+//    QString mask;
+//    QString ch;
+//    if(ui->radioButton_10->isChecked()){
+//        mask = "H";
+//        ch = "H";
+//    }
+//    else{
+//        mask = "HH";
+//        ch = "HH";
+//    }
+//    for (int i = 1; i < ui->spinBox_2->value(); i++){
+//        mask += "-";
+//        mask += ch;
+//    }
+//    ui->lineEdit_2->setInputMask(mask);
+//}
+
+void EditFieldsCdg::on_spinBox_2_editingFinished()
+{
+    ui->lineEdit_2->setMaxLength(ui->spinBox_2->value());
+}
+
+void EditFieldsCdg::transformWithOneHexChar(QString &a){
+    QString buffer{""};
+    for(auto i = 0; i < a.length() - 1; ++i){
+        buffer += a.at(i);
+        buffer += '-';
+    }
+    buffer += a.back();
+    a = buffer;
+}
+
+void EditFieldsCdg::transformWithTwoHexChars(QString &a){
+    QString buffer{""};
+    for(auto i = 0; i < a.length(); ++i){
+        buffer += a.at(i);
+        if(i % 2 == 1&& i < a.length() - 1){
+            buffer += '-';
+        }
+    }
+    a = buffer;
+}
+bool EditFieldsCdg::checker(const QString &str){ //QValidator как то не удался, такой вот костыль
+    QString exp = "0123456789abcdefABCDEF-\0";
+    int i = -1;
+    while(++i < str.count()){
+        if(!exp.contains(str[i]))
+            return false;
+    }
+    return true;
+}
+
+void EditFieldsCdg::on_pushButton_clicked()
+{
+    if(ui->radioButton_10->isChecked()){
+        ui->lineEdit_2->setMaxLength(ui->spinBox_2->value());
+        QString someText = ui->lineEdit_2->text();
+        transformWithOneHexChar(someText);
+        ui->lineEdit_2->setMaxLength(someText.length());
+        ui->lineEdit_2->setText(someText);
+    }
+    if(ui->radioButton_9->isChecked()){
+        ui->lineEdit_2->setMaxLength(ui->spinBox_2->value());
+        QString someText = ui->lineEdit_2->text();
+        transformWithTwoHexChars(someText);
+        ui->lineEdit_2->setMaxLength(someText.length());
+        ui->lineEdit_2->setText(someText);
+    }
+
+
+}
